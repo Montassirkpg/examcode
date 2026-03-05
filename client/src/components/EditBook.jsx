@@ -39,7 +39,7 @@ const EditBook = () => {
         setSuccess(false);
 
         try {
-            const response = await fetch(`/api/books/${bookId}`, {
+            const response = await fetch(`${base}api/books/${bookId}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json'

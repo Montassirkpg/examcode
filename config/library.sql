@@ -41,6 +41,16 @@ CREATE TABLE `livres` (
   `photo_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+CREATE TABLE `emprunts`(
+  `id` int NOT NULL PriMARY KEY AUTO_INCREMENT,
+  `livre_id` int NOT NULL,
+  `utilisateur_id` int NOT NULL,
+  `date_emprunt` date NOT NULL,
+  `date_retour` date DEFAULT NULL,
+  FOREIGN KEY (livre_id) REFERENCES livres(id),
+  FOREIGN KEY (utilisateur_id) REFERENCES utilisateurs(id)
+)
+
 --
 -- Déchargement des données de la table `livres`
 --

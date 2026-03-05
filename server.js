@@ -2,11 +2,13 @@ const express = require('express')
 const bodyParser = require('body-parser')
 const booksrouter = require('./router/books')
 const usersRouter = require('./router/users')
+const empruntRouter = require('./router/emprunt');
 const cors = require('cors')
 const path = require('path')
 const cookieParser = require('cookie-parser')
 const jwt = require('jsonwebtoken')
 const db = require('./services/database')
+
 
 const JWT_SECRET = "HelloThereImObiWan"
 function authenticateToken(req, res, next) {
@@ -32,9 +34,14 @@ router.use(cors(corsOptions));
 router.use(cookieParser());
 router.use('/api/books', booksrouter);
 router.use('/api/users', usersRouter);
+router.use('/api/emprunts', empruntRouter);
 
 router.post('/api/logout', (req, res) => {
-    req.session.destroy();
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'lax'
+    });
     res.json({ message: 'Déconnexion réussie' });
 });
 
