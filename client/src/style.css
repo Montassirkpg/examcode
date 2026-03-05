@@ -60,8 +60,8 @@ th {
 }
 
 button {
-    background-color: #007BFF;
-    color: white;
+    background-color: #2e7d32;
+    color: #ffffff;
     padding: 10px 20px;
     border: none;
     border-radius: 5px;
@@ -224,7 +224,7 @@ input {
 }
 
 button {
-    background-color: #007BFF;
+    background-color: #2e7d32;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -234,7 +234,7 @@ button {
 }
 
 button:hover {
-    background-color: #0056b3;
+    background-color: #1b5e20;
 }
 
 p {

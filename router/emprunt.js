@@ -1,20 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('./../services/database');
-const jwt = require('jsonwebtoken');
-
-const JWT_SECRET = 'HelloThereImObiWan';
-
-function authenticateToken(req, res, next) {
-    const token = req.cookies?.token;
-    if (!token) return res.sendStatus(401);
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403);
-        req.user = user;
-        next();
-    });
-}
+const { authenticateToken } = require('./../middleware/auth');
 
 
 router.get('/',(req,res)=>{
@@ -74,35 +61,26 @@ router.post('/emprunter/:livre_id', authenticateToken, (req, res) => {
             return res.status(409).json({ message: 'Ce livre est deja emprunte' });
         }
 
-        const nextIdSql = 'SELECT COALESCE(MAX(id), 0) + 1 AS next_id FROM emprunts';
-        db.query(nextIdSql, (idErr, idRows) => {
-            if (idErr) {
-                console.error(idErr);
-                return res.status(500).json({ message: 'Erreur serveur (id emprunt)' });
+        const insertSql = 'INSERT INTO emprunts (livre_id, utilisateur_id, date_emprunt) VALUES (?, ?, NOW())';
+        db.query(insertSql, [livre_id, utilisateur_id], (insertErr, result) => {
+            if (insertErr) {
+                console.error(insertErr);
+                return res.status(500).send('Erreur serveur');
             }
 
-            const nextId = idRows[0].next_id;
-            const insertSql = 'INSERT INTO emprunts (id, livre_id, utilisateur_id, date_emprunt) VALUES (?, ?, ?, CURDATE())';
-            db.query(insertSql, [nextId, livre_id, utilisateur_id], (insertErr) => {
-                if (insertErr) {
-                    console.error(insertErr);
-                    return res.status(500).json({ message: 'Erreur serveur (creation emprunt)' });
+            const updateBookSql = "UPDATE livres SET statut = 'emprunté' WHERE id = ?";
+            db.query(updateBookSql, [livre_id], (updateErr) => {
+                if (updateErr) {
+                    console.error(updateErr);
+                    return res.status(500).send('Erreur serveur');
                 }
 
-                const updateBookSql = "UPDATE livres SET statut = 'emprunté' WHERE id = ?";
-                db.query(updateBookSql, [livre_id], (updateErr) => {
-                    if (updateErr) {
-                        console.error(updateErr);
-                        return res.status(500).json({ message: 'Erreur serveur (maj livre)' });
-                    }
-
-                    return res.status(201).json({
-                        id: nextId,
-                        livre_id: Number(livre_id),
-                        utilisateur_id,
-                        message: 'Livre emprunte',
-                        date_retour_prevue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-                    });
+                return res.status(201).json({
+                    id: result.insertId,
+                    livre_id: Number(livre_id),
+                    utilisateur_id,
+                    message: 'Livre emprunte',
+                    date_retour_prevue: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
                 });
             });
         });

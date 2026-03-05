@@ -3,26 +3,7 @@ const router = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const db = require('./../services/database')
-
-const JWT_SECRET = "HelloThereImObiWan"
-
-function authenticateToken(req, res, next) {
-    const token = req.cookies.token
-    if (!token) return res.sendStatus(401)
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403)
-        req.user = user
-        next()
-    })
-}
-
-function isAdmin(req, res, next) {
-    if (req.user.role !== 'admin') {
-        return res.status(403).send('Accès interdit');
-    }
-    next();
-}
+const { authenticateToken, isAdmin, getAuthCookieOptions, JWT_SECRET } = require('./../middleware/auth')
 
 router
 .get('/',authenticateToken, isAdmin, (_, res) => {
@@ -76,11 +57,7 @@ router
         }
 
         const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '2h' })
-        res.cookie('token', token, {
-            httpOnly: true,
-            secure: false, // Utiliser 'true' si HTTPS
-            sameSite: 'lax'
-        })
+        res.cookie('token', token, getAuthCookieOptions())
         res.json({ token })
     })
 })

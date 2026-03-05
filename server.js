@@ -4,31 +4,33 @@ const booksrouter = require('./router/books')
 const usersRouter = require('./router/users')
 const empruntRouter = require('./router/emprunt');
 const cors = require('cors')
+const helmet = require('helmet')
 const path = require('path')
 const cookieParser = require('cookie-parser')
-const jwt = require('jsonwebtoken')
 const db = require('./services/database')
+const { authenticateToken, isAdmin, getAuthCookieOptions } = require('./middleware/auth')
 
-
-const JWT_SECRET = "HelloThereImObiWan"
-function authenticateToken(req, res, next) {
-    const token = req.cookies.token
-    if (!token) return res.sendStatus(401)
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.sendStatus(403)
-        req.user = user
-        next()
-    })
-}
 const corsOptions = {
     origin: 'https://exam.andragogy.fr',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
-    optionsSuccessStatus: 204
+    optionsSuccessStatus: 204,
+    allowedHeaders: ['Content-Type', 'Authorization']
 }
 
 const router = express.Router()
+router.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'"],  // Autorise uniquement les scripts du domaine
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", 'data:', 'https:'],
+            connectSrc: ["'self'", 'http://localhost:3000'],
+        },
+    },
+    xssFilter: true,
+}));
 router.use(bodyParser.json());
 router.use(cors(corsOptions));
 router.use(cookieParser());
@@ -37,30 +39,32 @@ router.use('/api/users', usersRouter);
 router.use('/api/emprunts', empruntRouter);
 
 router.post('/api/logout', (req, res) => {
-    res.clearCookie('token', {
-        httpOnly: true,
-        secure: false,
-        sameSite: 'lax'
-    });
-    res.json({ message: 'Déconnexion réussie' });
+    res.clearCookie('token', getAuthCookieOptions());
+    res.json({ message: 'Deconnexion reussie' });
 });
 
 router.get('/api/session', authenticateToken, (req, res) => {
     if (req?.user) {
         res.json({ user: req.user });
     } else {
-        res.status(401).json({ message: 'Non authentifié' });
+        res.status(401).json({ message: 'Non authentifie' });
     }
 });
 
-router.get('/api/statistics', (req, res) => {
+router.get('/api/statistics', authenticateToken, isAdmin, (req, res) => {
     const totalBooksQuery = 'SELECT COUNT(*) AS total_books FROM livres';
     const totalUsersQuery = 'SELECT COUNT(*) AS total_users FROM utilisateurs';
 
     db.query(totalBooksQuery, (err, booksResult) => {
-        if (err) throw err;
+        if (err) {
+            console.error(err)
+            return res.status(500).json({ message: 'Erreur serveur' })
+        }
         db.query(totalUsersQuery, (err, usersResult) => {
-            if (err) throw err;
+            if (err) {
+                console.error(err)
+                return res.status(500).json({ message: 'Erreur serveur' })
+            }
             res.json({
                 total_books: booksResult[0].total_books,
                 total_users: usersResult[0].total_users
